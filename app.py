@@ -47,7 +47,10 @@ def latex():
         ax.axis('off')
 
         y_positions = np.linspace(0.9, 0.1, n) if n > 1 else [0.5]
-        for formula, y in zip(formulas, y_positions):
+        for i, (formula, y) in enumerate(zip(formulas, y_positions), 1):
+            label = f'[{i}]' if n > 1 else ''
+            ax.text(0.05, y, label, ha='left', va='center',
+                    fontsize=14, transform=ax.transAxes, color='gray')
             ax.text(0.5, y, f'${formula}$', ha='center', va='center',
                     fontsize=18, transform=ax.transAxes)
 
