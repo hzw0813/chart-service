@@ -8,6 +8,10 @@ import os
 
 app = Flask(__name__)
 
+# 啟用 LaTeX 渲染的 mathtext
+plt.rcParams['mathtext.fontset'] = 'cm'
+plt.rcParams['font.family'] = 'serif'
+
 @app.route('/')
 def home():
     return 'Chart service is running!'
@@ -17,20 +21,41 @@ def generate():
     try:
         data = request.json
         code = data.get('code', '')
-        
-        # 清理舊圖
         plt.close('all')
-        
-        # 執行程式碼
         local_vars = {'plt': plt, 'np': np}
         exec(code, local_vars)
-        
-        # 儲存圖片到記憶體
         buf = io.BytesIO()
         plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
         buf.seek(0)
         plt.close('all')
-        
+        return send_file(buf, mimetype='image/png')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/latex', methods=['POST'])
+def latex():
+    try:
+        data = request.json
+        formulas = data.get('formulas', [])
+        if not formulas:
+            return jsonify({'error': 'no formulas'}), 400
+
+        plt.close('all')
+        n = len(formulas)
+        fig_height = max(1.5, 0.8 * n + 0.5)
+        fig, ax = plt.subplots(figsize=(8, fig_height))
+        ax.axis('off')
+
+        y_positions = np.linspace(0.9, 0.1, n) if n > 1 else [0.5]
+        for formula, y in zip(formulas, y_positions):
+            ax.text(0.5, y, f'${formula}$', ha='center', va='center',
+                    fontsize=18, transform=ax.transAxes)
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight',
+                    facecolor='white', pad_inches=0.3)
+        buf.seek(0)
+        plt.close('all')
         return send_file(buf, mimetype='image/png')
     except Exception as e:
         return jsonify({'error': str(e)}), 500
